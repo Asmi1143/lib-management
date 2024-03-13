@@ -123,17 +123,17 @@ app.post('/addBook', (req, res) => {
 
 app.post('/removeBook', (req, res) => {
     console.log(req);
-    const { id } = req.body;
+    const { title } = req.body;
     const sql = 'DELETE FROM books WHERE title = ?';
 
-    db.query(sql, [id], (err, data) => {
+    db.query(sql, [title], (err, data) => {
         if (err) {
             return res.status(500).json({ error: 'Error removing book' });
         }
 
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({ event: 'bookRemoved', bookId: id }));
+                client.send(JSON.stringify({ event: 'bookRemoved', bookTitle: title }));
             }
         });
 
@@ -142,11 +142,10 @@ app.post('/removeBook', (req, res) => {
 });
 
 app.post('/borrowBook', (req, res) => {
-    const { id } = req.body;
-    const sqlSelect = 'SELECT availableCopies FROM books WHERE id = ?';
-    const sqlUpdate = 'UPDATE books SET availableCopies = ? WHERE id = ?';
-
-    db.query(sqlSelect, [id], (err, result) => {
+    const { title } = req.body;
+    const sqlSelect = 'SELECT availableCopies FROM books WHERE title= ?';
+    const sqlUpdate = 'UPDATE books SET availableCopies = ? WHERE title= ?';
+    db.query(sqlSelect, [title], (err, result) => {
         if (err) {
             return res.json({ error: 'Error fetching available copies' });
         }
@@ -154,7 +153,7 @@ app.post('/borrowBook', (req, res) => {
         const availableCopies = result[0].availableCopies;
 
         if (availableCopies > 0) {
-            db.query(sqlUpdate, [availableCopies - 1, id], (updateErr, updateResult) => {
+            db.query(sqlUpdate, [availableCopies - 1, title], (updateErr, sqlUpdate) => {
                 if (updateErr) {
                     return res.json({ error: 'Error updating available copies' });
                 }
